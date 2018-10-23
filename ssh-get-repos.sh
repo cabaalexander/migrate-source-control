@@ -2,42 +2,73 @@
 
 trap "{ rm -rf $TEMP_DIR; }" SIGINT SIGTERM EXIT
 
-__git_clone(){
+__make_git_url(){
   local SOURCE_CONTROL=$1
   local REPO=$2
-  local FULL_PATH="git@${SOURCE_CONTROL}.com:cabaalexander/${REPO}.git"
-  local DST="$SOURCE_CONTROL/$REPO"
-
-  test -d $SOURCE_CONTROL || mkdir $SOURCE_CONTROL
-  test -d $DST && return 0
-
-  echo "Cloning: $REPO into '$DST'"
-  echo
-  git clone $FULL_PATH $DST &> /dev/null
+  echo "git@${SOURCE_CONTROL}.com:cabaalexander/${REPO}.git"
 }
 
-URLS=(
-  doom-arch-install
-  jenkins-training
-  dot-files
-  nvim
-  pdf
+REPO_NAMES=(
   devagrant
-  learn-you-haskell
+  doom-arch-install
+  dot-files
+  getRandomFromArray
+  gmail-api-getting-started
+  go-training
   hapi-server
   jenkins
-  go-training
-  gmail-api-getting-started
-  getRandomFromArray
-  anchat
+  jenkins-training
+  learn-you-haskell
+  migrate-source-control
+  nvim
+  pdf
 )
 
-__clone_repo(){
-  for REPO in $@
+SRC=${1:-"gitlab"}
+DST=${2:-"github"}
+
+__clone_repos(){
+  # Clone all repos from source
+  # ===========================
+  for REPO in ${REPO_NAMES[*]}
   do
-    __git_clone gitlab $REPO
+    local DST="$SRC/$REPO"
+
+    test -d $SRC || mkdir $SRC
+    test -d $DST && continue
+
+    echo "Cloning: $REPO into '$DST'"
+
+    git clone $(__make_git_url $SRC $REPO) $DST &> /dev/null
+  done
+
+}
+
+__push_repo_to_destiny(){
+  # Copy all the repos to the destiny source control
+  # ================================================
+  for REPO in $(ls $SRC)
+  do
+    cd $SRC/$REPO
+
+    echo -e "- $REPO"
+
+    # Git repo realm
+
+    git remote set-url origin $(__make_git_url $DST $REPO)
+    git remote -v
+    git push origin master -f
+
+    # Git repo realm
+
+    cd - &> /dev/null
   done
 }
 
-__clone_repo ${URLS[*]}
+echo -e ":: Cloning Repos ::\n"
+__clone_repos
 
+echo
+
+echo -e ":: Pushing repos to \`$DST\` ::\n"
+__push_repo_to_destiny
